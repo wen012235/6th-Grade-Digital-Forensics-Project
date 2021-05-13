@@ -1,0 +1,79 @@
+#! /usr/bin/env python3
+
+import re
+import hashlib
+
+with open("carveit", 'rb') as f:
+  data = f.read()
+  f.close()
+  PDF_SOF = b'(\x25\x50\x44\x46)'
+  PDF_EOF = b'(\x0A\x25\x25\x45\x4F\x46|\x0A\x25\x25\x45\x4F\x46\x0A|\x0D\x0A\x25\x25\x45\x4F\x46\x0D\x0A|\x0D\x25\x25\x45\x4F\x46\x0D)' 
+  regex=re.compile(PDF_SOF)
+  regex1=re.compile(PDF_EOF)
+  SOF_list=[match.start()for match in regex.finditer(data)]
+   
+  EOF_list=[match.start()for match in regex1.finditer(data)]
+print(SOF_list)
+print(EOF_list)
+
+def fileHash(fileName, fileType):
+    BLOCKSIZE = 65536
+    file = fileName
+    md5_hash = hashlib.md5()
+    with open(file, 'rb') as afile:
+        buf = afile.read(BLOCKSIZE)
+        while len(buf) > 0:
+            md5_hash.update(buf)
+            buf = afile.read(BLOCKSIZE)
+    hashVal = md5_hash.hexdigest()
+    fName = fileType + " hashes.txt"
+    file = open(fName, 'a+')
+    file.write(fileName + " has a hash value of " + hashVal + "\n")
+    file.close()
+
+def fileBasics(fileType, fileName, startOfFile, endOfFile):
+    fType = fileType
+    fName = fileName
+    bof = startOfFile
+    eof = endOfFile
+    size = int(eof - bof)
+    offSet = hex(bof)  # Converts the offset to Hex
+
+    # Writes the file data to the screen
+    print("File Information")
+    print("------------------------------------------------------------------")
+    print("Found a file of type " + fType + " and carving it to " + fName)
+    print("The file has an offset of " + str(offSet) + " and a size of " + str(size))
+    print("------------------------------------------------------------------")
+    print(" ")
+
+    # Writes the file data to a file in case it needs to be looked at later on
+    file = open('File Information.txt', 'a+')
+    file.write("========================================================\n")
+    file.write(fileName + " Information \n")
+    file.write("--------------------------------------------------------\n")
+    file.write("This file is type: " + fType + "\n")
+    file.write("The offset of this file is: " + str(offSet) + "\n")
+    file.write("The size of the file is: " + str(size) + "\n")
+    file.write("========================================================\n\n")
+    file.close()
+
+i=0
+b=0
+
+for SOF in SOF_list:
+  while SOF_list[b] > EOF_list[i]:
+    i+=1
+  subdata=data[SOF_list[b]:EOF_list[i]+8]
+  carve_filename="Carve1_"+str(SOF)+"_"+str(EOF_list[i]+8)+".pdf"
+  carve_obj=open(carve_filename,'wb')
+  carve_obj.write(subdata)
+  carve_obj.close()
+  fileHash(carve_filename, "PDF")
+  fileBasics("PDF", carve_filename, SOF_list[b], EOF_list[i] + 8)
+  print ("Found an image and carving it to "+carve_filename)
+  if SOF_list[b]==SOF_list[-1]:
+    break
+  else:
+    b=b+1    
+    
